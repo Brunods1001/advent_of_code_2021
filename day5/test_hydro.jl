@@ -127,27 +127,30 @@ md"""
 collect(9:-1:3)
 
 # ╔═╡ bae71f9d-9ac8-4084-ab88-cdb6c984f0c7
-function coverage(p1::Point, p2::Point)
-	if p1.x == p2.x
-		if p1.y < p2.y
-			inc = 1
-		else
-			inc = -1
-		end
-		list_y = p1.y:inc:p2.y
+function coverage(p1::Point, p2::Point; all=false)	
+	if p1.x < p2.x
+		inc_x = 1
+	else
+		inc_x = -1
+	end
+	if p1.y < p2.y
+		inc_y = 1
+	else
+		inc_y = -1
+	end
+	if all
+		list_x = p1.x:inc_x:p2.x
+		list_y = p1.y:inc_y:p2.y
+		
+	elseif p1.x == p2.x
+		list_y = p1.y:inc_y:p2.y
 		numrep = length(list_y)
 		list_x = repeat([p1.x], numrep)
 	elseif p1.y == p2.y
-		if p1.x < p2.x
-			inc = 1
-		else
-			inc = -1
-		end
-		list_x = p1.x:inc:p2.x
+		list_x = p1.x:inc_x:p2.x
 		numrep = length(list_x)
 		list_y = repeat([p1.y], numrep)
 	else
-		DomainError("Only handling vertical and horizontal translations.")
 		list_x = []
 		list_y = []
 	end
@@ -155,13 +158,13 @@ function coverage(p1::Point, p2::Point)
 end
 
 # ╔═╡ ecc9a402-586c-442b-a772-a17515b8b72a
-coverage(line::Line) = coverage(line.p1, line.p2)
+coverage(line::Line; all=false) = coverage(line.p1, line.p2; all)
 
 # ╔═╡ a70e2dcb-884a-4186-860b-f1fd5b29232c
 begin
 	p1 = Point("10,5")
 	p2 = Point("8,5")
-	coverage(p1, p2)
+	coverage(p1, p2; all=false)
 end
 
 # ╔═╡ ef2dc34b-7eb8-4061-9164-7e626f2017a8
@@ -175,7 +178,7 @@ end
 end
 
 # ╔═╡ 955adad4-e098-49ce-84b8-af55d39e389c
-revert.(coverage(Line("9,7 -> 7,7")))
+revert.(coverage(Line("1,1 -> 1,3")))
 
 # ╔═╡ 869ee00a-9859-4161-b49e-81524243c079
 md"""
@@ -192,7 +195,7 @@ line = first(split_data(data))
 list_lines = parse_line.(split_data(data))
 
 # ╔═╡ 81af8fa1-6561-4876-b08e-9579edacbf06
-coverage.(list_lines)
+coverage.(list_lines; all=true)
 
 # ╔═╡ cfb4027a-209c-4445-a564-33976fe7d767
 @test split_data(data) == revert.(parse_line.(split_data(data)))
@@ -207,18 +210,48 @@ import StatsBase
 
 # ╔═╡ d174a2aa-b0d9-4e4f-818e-9f0a86aa87d8
 "Finds number of duplicate points"
-function calc_overlap(data)
+function calc_overlap1(data)
 	lines = parse_line.(split_data(data))
 	points = vcat(coverage.(lines)...)
-	StatsBase.countmap(points)
+	count_points = StatsBase.countmap(points)
+	length(filter((v) -> v[2] > 1, count_points))
 end
-
-# ╔═╡ 8a192265-0cb9-48b8-82a4-0cd132d85988
-calc_overlap(data)
 
 # ╔═╡ 2b87de30-36bf-4b06-8138-796cf2a30245
 @testset "overlap" begin
-	@test calc_overlap(data) == 5
+	@test calc_overlap1(data) == 5
+end
+
+# ╔═╡ 66de0c0d-a2b4-426d-b154-0288cc29ae19
+md"""
+## Part 1
+"""
+
+# ╔═╡ 31538a56-f9a4-4950-b14a-6314b14c5d5b
+puzzle = read("./data.txt", String) |> strip
+
+# ╔═╡ 3f32edd3-fd99-48bb-b512-f79917525e5b
+calc_overlap1(puzzle)
+
+# ╔═╡ a156ec1a-7359-46b5-8f7b-e98024240949
+md"""
+## Part 2
+"""
+
+# ╔═╡ 181f62ac-83c6-48dd-8120-255cc5a27814
+function calc_overlap2(data)
+	lines = parse_line.(split_data(data))
+	points = vcat(coverage.(lines; all=true)...)
+	count_points = StatsBase.countmap(points)
+	length(filter((v) -> v[2] > 1, count_points))
+end
+
+# ╔═╡ 85ef7142-e492-41a4-92e7-e01bbffd9782
+calc_overlap2(data)
+
+# ╔═╡ 83206611-990e-4678-b6ed-089bcebd907e
+@testset "overlap 2" begin
+	@test calc_overlap2(data; all=true) == 12
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -510,7 +543,13 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─d764307b-e33b-4c10-94bf-42e19fda48fa
 # ╠═24b79bca-a38d-498a-913c-02491a9fea67
 # ╠═d174a2aa-b0d9-4e4f-818e-9f0a86aa87d8
-# ╠═8a192265-0cb9-48b8-82a4-0cd132d85988
 # ╠═2b87de30-36bf-4b06-8138-796cf2a30245
+# ╟─66de0c0d-a2b4-426d-b154-0288cc29ae19
+# ╠═31538a56-f9a4-4950-b14a-6314b14c5d5b
+# ╠═3f32edd3-fd99-48bb-b512-f79917525e5b
+# ╟─a156ec1a-7359-46b5-8f7b-e98024240949
+# ╠═181f62ac-83c6-48dd-8120-255cc5a27814
+# ╠═85ef7142-e492-41a4-92e7-e01bbffd9782
+# ╠═83206611-990e-4678-b6ed-089bcebd907e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
